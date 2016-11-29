@@ -1,8 +1,8 @@
-# ID3Edit
+# ID3Edit Swift 3
 ### Author: Philip Hardy
 
 ## Description:
-An easy to use Swift framework that edits and retrieves ID3 tag information.
+An easy to use Swift 3 framework that edits and retrieves ID3 tag information.
 
 ## Instructions:
 Drag the framework into your Swift project. Make sure to add to your project's
