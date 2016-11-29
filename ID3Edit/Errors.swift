@@ -6,11 +6,11 @@
 //  Copyright © 2016 Hardy Creations. All rights reserved.
 //
 
-public enum ID3EditErrors: ErrorType
+public enum ID3EditErrors: Error
 {
-    case NotAnMP3
-    case FileDoesNotExist
-    case NoDataExists
-    case TagSizeOverflow
-    case NoPathSet
+    case notAnMP3
+    case fileDoesNotExist
+    case noDataExists
+    case tagSizeOverflow
+    case noPathSet
 }

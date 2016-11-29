@@ -48,7 +48,7 @@ internal class ID3Tag
     {
         if artwork.art != nil
         {
-            return NSImage(data: artwork.art!)
+            return NSImage(data: artwork.art! as Data)
         }
         
         return nil
@@ -96,17 +96,17 @@ internal class ID3Tag
         self.lyrics = lyrics
     }
     
-    internal func setArtwork(artwork: NSImage, isPNG: Bool)
+    public func setArtwork(artwork: NSImage, isPNG: Bool)
     {
-        let imgRep = NSBitmapImageRep(data: artwork.TIFFRepresentation!)
+        let imgRep = NSBitmapImageRep(data: artwork.tiffRepresentation!)
         
         if isPNG
         {
-            self.artwork.art = imgRep?.representationUsingType(.NSPNGFileType , properties: [NSImageCompressionFactor: 0.5])
+            self.artwork.art = imgRep?.representation(using: .PNG , properties: [NSImageCompressionFactor: 0.5]) as NSData?
         }
         else
         {
-            self.artwork.art = imgRep?.representationUsingType(.NSJPEGFileType, properties: [NSImageCompressionFactor: 0.5])
+            self.artwork.art = imgRep?.representation(using: .JPEG, properties: [NSImageCompressionFactor: 0.5]) as NSData?
         }
         
         
@@ -124,39 +124,39 @@ internal class ID3Tag
     {
         var content: [Byte] = []
         
-        if infoExists(artist)
+        if infoExists(category: artist)
         {
             // Create the artist frame
-            let frame = createFrame(FRAMES.ARTIST, str: getArtist())
-            content.appendContentsOf(frame)
+            let frame = createFrame(frame: FRAMES.ARTIST, str: getArtist())
+            content.append(contentsOf: frame)
         }
         
-        if infoExists(title)
+        if infoExists(category: title)
         {
             // Create the title frame
-            let frame = createFrame(FRAMES.TITLE, str: getTitle())
-            content.appendContentsOf(frame)
+            let frame = createFrame(frame: FRAMES.TITLE, str: getTitle())
+            content.append(contentsOf: frame)
         }
         
-        if infoExists(album)
+        if infoExists(category: album)
         {
             // Create the album frame
-            let frame = createFrame(FRAMES.ALBUM, str: getAlbum())
-            content.appendContentsOf(frame)
+            let frame = createFrame(frame: FRAMES.ALBUM, str: getAlbum())
+            content.append(contentsOf: frame)
         }
         
-        if infoExists(lyrics)
+        if infoExists(category: lyrics)
         {
             // Create the lyrics frame
             let frame = createLyricFrame()
-            content.appendContentsOf(frame)
+            content.append(contentsOf: frame)
         }
         
         if artwork.art != nil
         {
             // Create the artwork frame
             let frame = createArtFrame()
-            content.appendContentsOf(frame)
+            content.append(contentsOf: frame)
         }
         
         if content.count == 0
@@ -167,8 +167,8 @@ internal class ID3Tag
         }
         
         // Make the tag header
-        var header = createTagHeader(content.count)
-        header.appendContentsOf(content)
+        var header = createTagHeader(contentSize: content.count)
+        header.append(contentsOf: content)
         
         return header
     }
@@ -182,7 +182,7 @@ internal class ID3Tag
         if cont[0] != 0
         {
             // Add padding to the beginning
-            cont.insert(0, atIndex: 0)
+            cont.insert(0, at: 0)
         }
         
         if cont.last != 0
@@ -192,12 +192,12 @@ internal class ID3Tag
         }
         
         // Add the size to the byte array
-        var size = toByteArray(UInt32(cont.count))
+        var size = toByteArray(num: UInt32(cont.count))
         size.removeFirst()
         
         // Create the frame
-        bytes.appendContentsOf(size)
-        bytes.appendContentsOf(cont)
+        bytes.append(contentsOf: size)
+        bytes.append(contentsOf: cont)
         
         // Return the completed frame
         return bytes
@@ -212,13 +212,13 @@ internal class ID3Tag
         
         let content = [Byte](getLyrics().utf8)
         
-        var size = toByteArray(UInt32(content.count + encoding.count))
+        var size = toByteArray(num: UInt32(content.count + encoding.count))
         size.removeFirst()
         
         // Form the header
-        bytes.appendContentsOf(size)
-        bytes.appendContentsOf(encoding)
-        bytes.appendContentsOf(content)
+        bytes.append(contentsOf: size)
+        bytes.append(contentsOf: encoding)
+        bytes.append(contentsOf: content)
         
         return bytes
     }
@@ -229,8 +229,8 @@ internal class ID3Tag
         var bytes: [Byte] = FRAMES.HEADER
         
         // Add the size to the byte array
-        let formattedSize = UInt32(calcSize(contentSize))
-        bytes.appendContentsOf(toByteArray(formattedSize))
+        let formattedSize = UInt32(calcSize(size: contentSize))
+        bytes.append(contentsOf: toByteArray(num: formattedSize))
         
         // Return the completed tag header
         return bytes
@@ -242,25 +242,28 @@ internal class ID3Tag
         var bytes: [Byte] = FRAMES.ARTWORK
         
         // Calculate size
-        var size = toByteArray(UInt32(artwork.art!.length + 6))
+        var size = toByteArray(num: UInt32(artwork.art!.length + 6))
         size.removeFirst()
         
-        bytes.appendContentsOf(size)
+        bytes.append(contentsOf: size)
         
         // Append encoding
         if artwork.isPNG!
         {
             // PNG encoding
-            bytes.appendContentsOf([0x00, 0x50, 0x4E, 0x47, 0x00 ,0x00])
+            bytes.append(contentsOf: [0x00, 0x50, 0x4E, 0x47, 0x00 ,0x00])
         }
         else
         {
             // JPG encoding
-            bytes.appendContentsOf([0x00, 0x4A, 0x50, 0x47, 0x00 ,0x00])
+            bytes.append(contentsOf: [0x00, 0x4A, 0x50, 0x47, 0x00 ,0x00])
         }
         
         // Add artwork data
-        bytes.appendContentsOf(Array(UnsafeBufferPointer(start: UnsafePointer<Byte>(artwork.art!.bytes), count: artwork.art!.length)))
+        let data = (artwork.art! as Data).withUnsafeBytes{ (bytes: UnsafePointer<Byte>)->[Byte] in
+            return Array(UnsafeBufferPointer(start: bytes, count: artwork.art!.length))
+        }
+        bytes.append(contentsOf: data)
         
         return bytes
     }
@@ -274,7 +277,7 @@ internal class ID3Tag
         // Holds the size of the tag
         var newSize = 0
         
-        for var i = 0; i < 4; i++
+        for i in 0 ..< 4
         {
             // Get the bytes from size
             let shift = i * 8
@@ -285,7 +288,7 @@ internal class ID3Tag
             var byte = (size & mask) >> shift
             
             var oMask: Byte = 0x80
-            for var j = 0; j < i; j++
+            for _ in 0 ..< i
             {
                 // Create the overflow mask
                 oMask = oMask >> 1
@@ -311,21 +314,20 @@ internal class ID3Tag
         return category != ""
     }
     
-    private func toByteArray<T>(var num: T) -> [Byte]
+    private func toByteArray<T>(num: T) -> [Byte]
     {
-        // Get pointer to number
-        let ptr = withUnsafePointer(&num) {
-            UnsafePointer<Byte>($0)
+        var copyNum = num
+        
+        let count = MemoryLayout.size(ofValue: num)
+        return withUnsafePointer(to: &copyNum) {
+            var data = [Byte]()
+            $0.withMemoryRebound(to: Byte.self, capacity: count) {ptr in
+                for i in 0 ..< count {
+                    data.append(ptr[count - 1 - i])
+                }
+            }
+            
+            return data
         }
-        
-        // The array to store the bytes
-        var bytes: [Byte] = []
-        
-        for var i = sizeof(T) - 1; i >= 0; i--
-        {
-            bytes.append(ptr[i])
-        }
-        
-        return bytes
     }
 }

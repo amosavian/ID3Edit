@@ -13,26 +13,26 @@ import Foundation
  Opens an MP3 file for reading and writing the ID3 tag
  
  - Parameter path: The path to the MP3 file
- - Parameter overwrite: Overwrite the ID3 tag in the file if one exists. (Default value is false) 
+ - Parameter overwrite: Overwrite the ID3 tag in the file if one exists. (Default value is false)
  
  **Note**: If there is an ID3 tag present but not of version 2.x the ID3 tag will be overwritten when the new tag is written
  
  - Throws: `ID3EditErrors.FileDoesNotExist` if the file at the given path does not exist or `ID3EditErrors.NotAnMP3` if the file is not an MP3
-*/
-public class MP3File
+ */
+open class MP3File
 {
     
     typealias Byte = UInt8
     
     
     // MARK: - Constants
-    private let BYTE = 8
+    fileprivate let BYTE = 8
     
     // MARK: - Instance Variables
-    private let parser: TagParser?
-    private let tag: ID3Tag = ID3Tag()
-    private var path: String?
-    private let data: NSData?
+    fileprivate let parser: TagParser?
+    fileprivate let tag: ID3Tag = ID3Tag()
+    fileprivate var path: String?
+    fileprivate let data: Data?
     
     
     
@@ -42,19 +42,19 @@ public class MP3File
         self.path = path
         
         // Get the data from the file
-        data = NSData(contentsOfFile: path)
+        data = try? Data(contentsOf: URL(fileURLWithPath: path))
         parser = TagParser(data: data, tag: tag)
         
         if data == nil
         {
             // The file does not exist
-            throw ID3EditErrors.FileDoesNotExist
+            throw ID3EditErrors.fileDoesNotExist
         }
         
         // Check the path extension
-        if (path as NSString).pathExtension.caseInsensitiveCompare("mp3") != NSComparisonResult.OrderedSame
+        if (path as NSString).pathExtension.caseInsensitiveCompare("mp3") != ComparisonResult.orderedSame
         {
-            throw ID3EditErrors.NotAnMP3
+            throw ID3EditErrors.notAnMP3
         }
         
         // Analyze the data
@@ -65,7 +65,7 @@ public class MP3File
     }
     
     
-    public init(data: NSData?, overwrite: Bool = false) throws
+    public init(data: Data?, overwrite: Bool = false) throws
     {
         
         self.data = data
@@ -73,7 +73,7 @@ public class MP3File
         
         if data == nil
         {
-            throw ID3EditErrors.NoDataExists
+            throw ID3EditErrors.noDataExists
         }
         
         // Analyze the data
@@ -91,7 +91,7 @@ public class MP3File
      
      - Returns: An `NSImage` if artwork exists and `nil` otherwise
      */
-    public func getArtwork() -> NSImage?
+    open func getArtwork() -> NSImage?
     {
         return tag.getArtwork()
     }
@@ -101,7 +101,7 @@ public class MP3File
      
      - Returns: The song artist or a blank `String` if not available
      */
-    public func getArtist() -> String
+    open func getArtist() -> String
     {
         return tag.getArtist()
     }
@@ -112,7 +112,7 @@ public class MP3File
      
      - Returns: The song title or a blank `String` if not available
      */
-    public func getTitle() -> String
+    open func getTitle() -> String
     {
         return tag.getTitle()
     }
@@ -122,8 +122,8 @@ public class MP3File
      Returns the album of the song
      
      - Returns: The song album or a blank `String` if not available
-    */
-    public func getAlbum() -> String
+     */
+    open func getAlbum() -> String
     {
         return tag.getAlbum()
     }
@@ -134,7 +134,7 @@ public class MP3File
      
      - Returns: The lyrics of song or a blank `String` if not available
      */
-    public func getLyrics() -> String
+    open func getLyrics() -> String
     {
         return tag.getLyrics()
     }
@@ -143,11 +143,11 @@ public class MP3File
     // MARK: - Mutator Methods
     
     /**
-    Sets the path for the mp3 file to be written
-    
-    - Parameter path: The path of for the file to be written
-    */
-    public func setPath(path: String)
+     Sets the path for the mp3 file to be written
+     
+     - Parameter path: The path of for the file to be written
+     */
+    open func setPath(_ path: String)
     {
         self.path = path
     }
@@ -158,9 +158,9 @@ public class MP3File
      
      - Parameter artist: The artist to be used when the tag is written
      */
-    public func setArtist(artist: String)
+    open func setArtist(_ artist: String)
     {
-        tag.setArtist(artist)
+        tag.setArtist(artist: artist)
     }
     
     
@@ -169,9 +169,9 @@ public class MP3File
      
      - Parameter title: The title to be used when the tag is written
      */
-    public func setTitle(title: String)
+    open func setTitle(_ title: String)
     {
-        tag.setTitle(title)
+        tag.setTitle(title: title)
     }
     
     
@@ -180,9 +180,9 @@ public class MP3File
      
      - Parameter album: The album to be used when the tag is written
      */
-    public func setAlbum(album: String)
+    open func setAlbum(_ album: String)
     {
-        tag.setAlbum(album)
+        tag.setAlbum(album: album)
     }
     
     
@@ -191,9 +191,9 @@ public class MP3File
      
      - Parameter lyrics: The lyrics to be used when the tag is written
      */
-    public func setLyrics(lyrics: String)
+    open func setLyrics(_ lyrics: String)
     {
-        tag.setLyrics(lyrics)
+        tag.setLyrics(lyrics: lyrics)
     }
     
     
@@ -205,9 +205,9 @@ public class MP3File
      
      - Note: The artwork can only be PNG or JPG
      */
-    public func setArtwork(artwork: NSImage, isPNG: Bool)
+    open func setArtwork(_ artwork: NSImage, isPNG: Bool)
     {
-        tag.setArtwork(artwork, isPNG: isPNG)
+        tag.setArtwork(artwork: artwork, isPNG: isPNG)
     }
     
     
@@ -219,12 +219,12 @@ public class MP3File
      - Returns: `true` if writes successfully, `false` otherwise
      - Throws: Throws `ID3EditErrors.TagSizeOverflow` if tag size is over 256MB
      */
-    public func writeTag() throws -> Bool
+    open func writeTag() throws -> Bool
     {
         if path == nil
         {
             // No path is set, prevent writing
-            throw ID3EditErrors.NoPathSet
+            throw ID3EditErrors.noPathSet
         }
         
         do
@@ -232,7 +232,7 @@ public class MP3File
             let newData = try getMP3Data()
             
             // Write the tag to the file
-            if newData.writeToFile(path!, atomically: true)
+            if (try? newData.write(to: URL(fileURLWithPath: path!), options: [.atomic])) != nil
             {
                 return true
             }
@@ -253,13 +253,13 @@ public class MP3File
      - Returns: The MP3 data with the new tag included
      - Note: The data is ready to write to a file
      */
-    public func getMP3Data() throws -> NSData
+    open func getMP3Data() throws -> Data
     {
         
         if data == nil
         {
             // Prevent writing if there is no data
-            throw ID3EditErrors.NoDataExists
+            throw ID3EditErrors.noDataExists
         }
         
         // Get the tag bytes
@@ -271,7 +271,7 @@ public class MP3File
         }
         else if content.count > 0xFFFFFFF
         {
-            throw ID3EditErrors.TagSizeOverflow
+            throw ID3EditErrors.tagSizeOverflow
         }
         
         // Form the binary data
@@ -288,9 +288,9 @@ public class MP3File
             tagSize = 0
         }
         
-        let music = data!.bytes + tagSize
-        newData.appendBytes(music, length: data!.length - tagSize)
+        let music = (data! as NSData).bytes + tagSize
+        newData.append(music, length: data!.count - tagSize)
         
-        return newData
+        return newData as Data
     }
 }
