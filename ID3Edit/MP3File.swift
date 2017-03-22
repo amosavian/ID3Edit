@@ -87,7 +87,7 @@ open class MP3File
         {
             parser!.analyzeData()
         }
-        path = ""
+        path = nil
     }
     
     
@@ -116,7 +116,7 @@ open class MP3File
             return tag.getArtist()
         }
         set {
-            tag.set(artist: artist)
+            tag.set(artist: newValue)
         }
     }
     
@@ -132,7 +132,7 @@ open class MP3File
             return tag.getTitle()
         }
         set {
-            tag.set(title: title)
+            tag.set(title: newValue)
         }
     }
     
@@ -148,7 +148,7 @@ open class MP3File
             return tag.getAlbum()
         }
         set {
-            tag.set(album: album)
+            tag.set(album: newValue)
         }
     }
     
@@ -162,7 +162,7 @@ open class MP3File
             return tag.getLyrics()
         }
         set {
-            tag.set(lyrics: lyrics)
+            tag.set(lyrics: newValue)
         }
     }
     
@@ -207,14 +207,8 @@ open class MP3File
             let newData = try getMP3Data()
             
             // Write the tag to the file
-            if (try newData.write(to: URL(fileURLWithPath: path), options: [.atomic])) != nil
-            {
-                return true
-            }
-            else
-            {
-                return false
-            }
+            try newData.write(to: URL(fileURLWithPath: path), options: [.atomic])
+            return true
         }
         catch let err
         {
