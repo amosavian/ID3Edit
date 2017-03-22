@@ -143,17 +143,17 @@ internal class TagParser
             if isArtistFrame(frame: frameBytes)
             {
                 // Store artist
-                tag.setArtist(artist: content)
+                tag.set(artist: content)
             }
             else if isTitleFrame(frame: frameBytes)
             {
                 // Store title
-                tag.setTitle(title: content)
+                tag.set(title: content)
             }
             else
             {
                 // Store album
-                tag.setAlbum(album: content)
+                tag.set(album: content)
             }
         }
         else if bytes.pointee == 0x55 // Starts with 'U' (Lyrics)
@@ -162,14 +162,14 @@ internal class TagParser
             let content = NSString(bytes: bytes + ID3Tag.LYRICS_FRAME_OFFSET, length: frameSize - ID3Tag.LYRICS_FRAME_OFFSET, encoding: String.Encoding.ascii.rawValue) as! String
             
             // Store the lyrics
-            tag.setLyrics(lyrics: content)
+            tag.set(lyrics: content)
         }
         else // Leaves us with artwork
         {
             // Frame holds artwork
             let isPNG = bytes[7] != 0x4A // Doesn't equal 'J' for JPG
             let artData = NSData(bytes: bytes + ID3Tag.ART_FRAME_OFFSET, length: frameSize - ID3Tag.ART_FRAME_OFFSET)
-            tag.setArtwork(artwork: artData, isPNG: isPNG)
+            tag.set(artwork: artData, isPNG: isPNG)
         }
     }
     

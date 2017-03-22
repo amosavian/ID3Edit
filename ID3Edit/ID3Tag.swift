@@ -7,6 +7,11 @@
 //
 
 import Foundation
+#if os(iOS) || os(tvOS)
+    import UIKit
+#elseif os(macOS)
+    import Cocoa
+#endif
 
 internal class ID3Tag
 {
@@ -44,11 +49,11 @@ internal class ID3Tag
     
     
     // MARK: - Accessor Methods
-    internal func getArtwork() -> NSImage?
+    internal func getArtwork() -> ImageClass?
     {
         if artwork.art != nil
         {
-            return NSImage(data: artwork.art! as Data)
+            return ImageClass(data: artwork.art! as Data)
         }
         
         return nil
@@ -76,28 +81,29 @@ internal class ID3Tag
     
     // MARK: - Mutator Methods
     
-    internal func setArtist(artist: String)
+    internal func set(artist: String)
     {
         self.artist = artist
     }
     
-    internal func setTitle(title: String)
+    internal func set(title: String)
     {
         self.title = title
     }
     
-    internal func setAlbum(album: String)
+    internal func set(album: String)
     {
         self.album = album
     }
     
-    internal func setLyrics(lyrics: String)
+    internal func set(lyrics: String)
     {
         self.lyrics = lyrics
     }
     
-    public func setArtwork(artwork: NSImage, isPNG: Bool)
+    internal func set(artwork: ImageClass, isPNG: Bool)
     {
+        #if os(macOS)
         let imgRep = NSBitmapImageRep(data: artwork.tiffRepresentation!)
         
         if isPNG
@@ -108,12 +114,21 @@ internal class ID3Tag
         {
             self.artwork.art = imgRep?.representation(using: .JPEG, properties: [NSImageCompressionFactor: 0.5]) as NSData?
         }
-        
+        #else
+        if isPNG
+        {
+            self.artwork.art = UIImagePNGRepresentation(artwork) as NSData?
+        }
+        else
+        {
+            self.artwork.art = UIImageJPEGRepresentation(artwork, 0.5) as NSData?
+        }
+        #endif
         
         self.artwork.isPNG = isPNG
     }
     
-    internal func setArtwork(artwork: NSData, isPNG: Bool)
+    internal func set(artwork: NSData, isPNG: Bool)
     {
         self.artwork.art = artwork
         self.artwork.isPNG = isPNG
@@ -127,21 +142,21 @@ internal class ID3Tag
         if infoExists(category: artist)
         {
             // Create the artist frame
-            let frame = createFrame(frame: FRAMES.ARTIST, str: getArtist())
+            let frame = create(frame: FRAMES.ARTIST, str: getArtist())
             content.append(contentsOf: frame)
         }
         
         if infoExists(category: title)
         {
             // Create the title frame
-            let frame = createFrame(frame: FRAMES.TITLE, str: getTitle())
+            let frame = create(frame: FRAMES.TITLE, str: getTitle())
             content.append(contentsOf: frame)
         }
         
         if infoExists(category: album)
         {
             // Create the album frame
-            let frame = createFrame(frame: FRAMES.ALBUM, str: getAlbum())
+            let frame = create(frame: FRAMES.ALBUM, str: getAlbum())
             content.append(contentsOf: frame)
         }
         
@@ -173,7 +188,7 @@ internal class ID3Tag
         return header
     }
     
-    private func createFrame(frame: [Byte], str: String) -> [Byte]
+    private func create(frame: [Byte], str: String) -> [Byte]
     {
         var bytes: [Byte] = frame
         
@@ -229,7 +244,7 @@ internal class ID3Tag
         var bytes: [Byte] = FRAMES.HEADER
         
         // Add the size to the byte array
-        let formattedSize = UInt32(calcSize(size: contentSize))
+        let formattedSize = UInt32(calc(size: contentSize))
         bytes.append(contentsOf: toByteArray(num: formattedSize))
         
         // Return the completed tag header
@@ -272,7 +287,7 @@ internal class ID3Tag
     
     
     
-    private func calcSize(size: Int) -> Int
+    private func calc(size: Int) -> Int
     {
         // Holds the size of the tag
         var newSize = 0

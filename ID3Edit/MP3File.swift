@@ -7,7 +7,13 @@
 //
 
 import Foundation
-
+#if os(iOS) || os(tvOS)
+    import UIKit
+    public typealias ImageClass = UIImage
+#elseif os(macOS)
+    import Cocoa
+    public typealias ImageClass = NSImage
+#endif
 
 /**
  Opens an MP3 file for reading and writing the ID3 tag
@@ -31,7 +37,7 @@ open class MP3File
     // MARK: - Instance Variables
     fileprivate let parser: TagParser?
     fileprivate let tag: ID3Tag = ID3Tag()
-    fileprivate var path: String?
+    fileprivate let path: String?
     fileprivate let data: Data?
     
     
@@ -81,6 +87,7 @@ open class MP3File
         {
             parser!.analyzeData()
         }
+        path = ""
     }
     
     
@@ -89,11 +96,13 @@ open class MP3File
     /**
      Returns the artwork for this file
      
-     - Returns: An `NSImage` if artwork exists and `nil` otherwise
+     - Returns: An `NSImage/UIImage` if artwork exists and `nil` otherwise
      */
-    open func getArtwork() -> NSImage?
+    open var artwork: ImageClass?
     {
-        return tag.getArtwork()
+        get {
+            return tag.getArtwork()
+        }
     }
     
     /**
@@ -101,9 +110,14 @@ open class MP3File
      
      - Returns: The song artist or a blank `String` if not available
      */
-    open func getArtist() -> String
+    open var artist: String
     {
-        return tag.getArtist()
+        get {
+            return tag.getArtist()
+        }
+        set {
+            tag.set(artist: artist)
+        }
     }
     
     
@@ -112,9 +126,14 @@ open class MP3File
      
      - Returns: The song title or a blank `String` if not available
      */
-    open func getTitle() -> String
+    open var title: String
     {
-        return tag.getTitle()
+        get {
+            return tag.getTitle()
+        }
+        set {
+            tag.set(title: title)
+        }
     }
     
     
@@ -123,79 +142,29 @@ open class MP3File
      
      - Returns: The song album or a blank `String` if not available
      */
-    open func getAlbum() -> String
+    open var album: String
     {
-        return tag.getAlbum()
+        get {
+            return tag.getAlbum()
+        }
+        set {
+            tag.set(album: album)
+        }
     }
-    
     
     /**
-     Returns the lyrics of the song
+     Returns the lyrics for the ID3 tag
      
-     - Returns: The lyrics of song or a blank `String` if not available
+     - Returns: The lyrics for the ID3 tag or a blank `String` if not available
      */
-    open func getLyrics() -> String
-    {
-        return tag.getLyrics()
+    open var lyrics: String {
+        get {
+            return tag.getLyrics()
+        }
+        set {
+            tag.set(lyrics: lyrics)
+        }
     }
-    
-    
-    // MARK: - Mutator Methods
-    
-    /**
-     Sets the path for the mp3 file to be written
-     
-     - Parameter path: The path of for the file to be written
-     */
-    open func setPath(_ path: String)
-    {
-        self.path = path
-    }
-    
-    
-    /**
-     Sets the artist for the ID3 tag
-     
-     - Parameter artist: The artist to be used when the tag is written
-     */
-    open func setArtist(_ artist: String)
-    {
-        tag.setArtist(artist: artist)
-    }
-    
-    
-    /**
-     Sets the title for the ID3 tag
-     
-     - Parameter title: The title to be used when the tag is written
-     */
-    open func setTitle(_ title: String)
-    {
-        tag.setTitle(title: title)
-    }
-    
-    
-    /**
-     Sets the album for the ID3 tag
-     
-     - Parameter album: The album to be used when the tag is written
-     */
-    open func setAlbum(_ album: String)
-    {
-        tag.setAlbum(album: album)
-    }
-    
-    
-    /**
-     Sets the lyrics for the ID3 tag
-     
-     - Parameter lyrics: The lyrics to be used when the tag is written
-     */
-    open func setLyrics(_ lyrics: String)
-    {
-        tag.setLyrics(lyrics: lyrics)
-    }
-    
     
     /**
      Sets the artwork for the ID3 tag
@@ -205,11 +174,23 @@ open class MP3File
      
      - Note: The artwork can only be PNG or JPG
      */
-    open func setArtwork(_ artwork: NSImage, isPNG: Bool)
+    open func set(artwork: ImageClass, isPNG: Bool)
     {
-        tag.setArtwork(artwork: artwork, isPNG: isPNG)
+        tag.set(artwork: artwork, isPNG: isPNG)
     }
     
+    /**
+     Sets the artwork for the ID3 tag
+     
+     - Parameter artwork: The art to be used when the tag is written
+     - Parameter isPNG: Whether the art is in PNG format or JPG
+     
+     - Note: The artwork can only be PNG or JPG
+     */
+    open func set(artworkData: Data, isPNG: Bool)
+    {
+        tag.set(artwork: artworkData as NSData, isPNG: isPNG)
+    }
     
     // MARK: - Tag Creation Methods
     
@@ -219,20 +200,14 @@ open class MP3File
      - Returns: `true` if writes successfully, `false` otherwise
      - Throws: Throws `ID3EditErrors.TagSizeOverflow` if tag size is over 256MB
      */
-    open func writeTag() throws -> Bool
+    open func writeTag(to path: String) throws -> Bool
     {
-        if path == nil
-        {
-            // No path is set, prevent writing
-            throw ID3EditErrors.noPathSet
-        }
-        
         do
         {
             let newData = try getMP3Data()
             
             // Write the tag to the file
-            if (try? newData.write(to: URL(fileURLWithPath: path!), options: [.atomic])) != nil
+            if (try newData.write(to: URL(fileURLWithPath: path), options: [.atomic])) != nil
             {
                 return true
             }
