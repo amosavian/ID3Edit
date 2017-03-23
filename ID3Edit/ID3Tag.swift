@@ -20,18 +20,80 @@ internal class ID3Tag
     // MARK: - Structs
     private struct AlbumArtwork
     {
-        var art: NSData?
+        var art: Data?
         var isPNG: Bool?
     }
     
-    internal class FRAMES
+    private struct FRAMES
     {
         static let ARTIST: [Byte] = [0x54, 0x50, 0x31]
         static let TITLE: [Byte] = [0x54, 0x54, 0x32]
         static let ALBUM: [Byte] = [0x54, 0x41, 0x4C]
+        static let COMPOSER: [Byte] = [0x54, 0x43, 0x4D]
+        static let TRACKNO: [Byte] = [0x54, 0x52, 0x4B]
+        static let YEAR: [Byte] = [0x54, 0x59, 0x45]
+        static let COPYRIGHT: [Byte] = [0x54, 0x43, 0x52]
+        static let PUBLISHER: [Byte] = [0x54, 0x50, 0x42]
         static let LYRICS: [Byte] = [0x55, 0x4C, 0x54]
         static let ARTWORK: [Byte] = [0x50, 0x49, 0x43]
         static let HEADER: [Byte] = [0x49, 0x44, 0x33, 0x02, 0x00, 0x00]
+    }
+    
+    internal enum frame: RawRepresentable {
+        case artist, title, album, composer
+        case trackNo, year, copyright, publisher
+        case lyrics, artwork, header
+        
+        typealias RawValue = [Byte]
+        
+        init? (rawValue: [Byte]) {
+            guard rawValue.count >= 3 else { return nil }
+            switch rawValue {
+            case FRAMES.ARTIST: self = .artist
+            case FRAMES.TITLE: self = .title
+            case FRAMES.ALBUM: self = .album
+            case FRAMES.COMPOSER: self = .composer
+            case FRAMES.TRACKNO: self = .trackNo
+            case FRAMES.YEAR: self = .year
+            case FRAMES.COPYRIGHT: self = .copyright
+            case FRAMES.PUBLISHER: self = .publisher
+            case FRAMES.LYRICS: self = .lyrics
+            case FRAMES.ARTWORK: self = .artwork
+            case FRAMES.HEADER: self = .header
+            default: return nil
+            }
+        }
+        
+        var rawValue: [Byte] {
+            switch self {
+            case .artist: return FRAMES.ARTIST
+            case .title: return FRAMES.TITLE
+            case .album: return FRAMES.ALBUM
+            case .composer: return FRAMES.COMPOSER
+            case .trackNo: return FRAMES.TRACKNO
+            case .year: return FRAMES.YEAR
+            case .copyright: return FRAMES.COPYRIGHT
+            case .publisher: return FRAMES.PUBLISHER
+            case .lyrics: return FRAMES.LYRICS
+            case .artwork: return FRAMES.ARTWORK
+            case .header: return FRAMES.HEADER
+            }
+        }
+        
+        var offset: Int {
+            switch self {
+            case .artist, .title, .album, .composer:
+                fallthrough
+            case .trackNo, .year, .copyright, .publisher:
+                return FRAME_OFFSET
+            case .lyrics:
+                return LYRICS_FRAME_OFFSET
+            case .artwork:
+                return ART_FRAME_OFFSET
+            case .header:
+                return TAG_OFFSET
+            }
+        }
     }
     
     // MARK: - Constants
@@ -41,10 +103,15 @@ internal class ID3Tag
     internal static let LYRICS_FRAME_OFFSET = 11
     
     // MARK: - Instance Variables
-    private var artist = ""
-    private var title = ""
-    private var album = ""
-    private var lyrics = ""
+    internal var artist = ""
+    internal var title = ""
+    internal var album = ""
+    internal var composer = ""
+    internal var trackNo = ""
+    internal var year = ""
+    internal var copyright = ""
+    internal var publisher = ""
+    internal var lyrics = ""
     private var artwork = AlbumArtwork()
     
     
@@ -53,52 +120,10 @@ internal class ID3Tag
     {
         if artwork.art != nil
         {
-            return ImageClass(data: artwork.art! as Data)
+            return ImageClass(data: artwork.art!)
         }
         
         return nil
-    }
-    
-    internal func getArtist() -> String
-    {
-        return artist
-    }
-    
-    internal func getTitle() -> String
-    {
-        return title
-    }
-    
-    internal func getAlbum() -> String
-    {
-        return album
-    }
-    
-    internal func getLyrics() -> String
-    {
-        return lyrics
-    }
-    
-    // MARK: - Mutator Methods
-    
-    internal func set(artist: String)
-    {
-        self.artist = artist
-    }
-    
-    internal func set(title: String)
-    {
-        self.title = title
-    }
-    
-    internal func set(album: String)
-    {
-        self.album = album
-    }
-    
-    internal func set(lyrics: String)
-    {
-        self.lyrics = lyrics
     }
     
     internal func set(artwork: ImageClass, isPNG: Bool)
@@ -108,27 +133,27 @@ internal class ID3Tag
         
         if isPNG
         {
-            self.artwork.art = imgRep?.representation(using: .PNG , properties: [NSImageCompressionFactor: 0.5]) as NSData?
+            self.artwork.art = imgRep?.representation(using: .PNG , properties: [NSImageCompressionFactor: 0.5])
         }
         else
         {
-            self.artwork.art = imgRep?.representation(using: .JPEG, properties: [NSImageCompressionFactor: 0.5]) as NSData?
+            self.artwork.art = imgRep?.representation(using: .JPEG, properties: [NSImageCompressionFactor: 0.5])
         }
         #else
         if isPNG
         {
-            self.artwork.art = UIImagePNGRepresentation(artwork) as NSData?
+            self.artwork.art = UIImagePNGRepresentation(artwork)
         }
         else
         {
-            self.artwork.art = UIImageJPEGRepresentation(artwork, 0.5) as NSData?
+            self.artwork.art = UIImageJPEGRepresentation(artwork, 0.5)
         }
         #endif
         
         self.artwork.isPNG = isPNG
     }
     
-    internal func set(artwork: NSData, isPNG: Bool)
+    internal func set(artwork: Data, isPNG: Bool)
     {
         self.artwork.art = artwork
         self.artwork.isPNG = isPNG
@@ -139,38 +164,63 @@ internal class ID3Tag
     {
         var content: [Byte] = []
         
-        if infoExists(category: artist)
+        // Create the artist frame
+        if let frame = create(frame: FRAMES.ARTIST, str: artist)
         {
-            // Create the artist frame
-            let frame = create(frame: FRAMES.ARTIST, str: getArtist())
             content.append(contentsOf: frame)
         }
         
-        if infoExists(category: title)
+        // Create the title frame
+        if let frame = create(frame: FRAMES.TITLE, str: title)
         {
-            // Create the title frame
-            let frame = create(frame: FRAMES.TITLE, str: getTitle())
             content.append(contentsOf: frame)
         }
         
-        if infoExists(category: album)
+        // Create the album frame
+        if let frame = create(frame: FRAMES.ALBUM, str: album)
         {
-            // Create the album frame
-            let frame = create(frame: FRAMES.ALBUM, str: getAlbum())
             content.append(contentsOf: frame)
         }
         
-        if infoExists(category: lyrics)
+        // Create the composer frame
+        if let frame = create(frame: FRAMES.COMPOSER, str: composer)
         {
-            // Create the lyrics frame
-            let frame = createLyricFrame()
             content.append(contentsOf: frame)
         }
         
-        if artwork.art != nil
+        // Create the trackNo frame
+        if let frame = create(frame: FRAMES.TRACKNO, str: trackNo)
         {
-            // Create the artwork frame
-            let frame = createArtFrame()
+            content.append(contentsOf: frame)
+        }
+        
+        // Create the year frame
+        if let frame = create(frame: FRAMES.YEAR, str: year)
+        {
+            content.append(contentsOf: frame)
+        }
+        
+        // Create the copyright frame
+        if let frame = create(frame: FRAMES.COPYRIGHT, str: copyright)
+        {
+            content.append(contentsOf: frame)
+        }
+        
+        // Create the publisher frame
+        if let frame = create(frame: FRAMES.PUBLISHER, str: publisher)
+        {
+            content.append(contentsOf: frame)
+        }
+        
+        // Create the lyrics frame
+        if let frame = createLyricFrame()
+        {
+            content.append(contentsOf: frame)
+        }
+        
+        // Create the artwork frame
+        if let frame = createArtFrame()
+        {
             content.append(contentsOf: frame)
         }
         
@@ -188,8 +238,9 @@ internal class ID3Tag
         return header
     }
     
-    private func create(frame: [Byte], str: String) -> [Byte]
+    private func create(frame: [Byte], str: String) -> [Byte]?
     {
+        guard !str.isEmpty else { return nil }
         var bytes: [Byte] = frame
         
         var cont = [Byte](str.utf8)
@@ -219,13 +270,14 @@ internal class ID3Tag
     }
     
     
-    private func createLyricFrame() -> [Byte]
+    private func createLyricFrame() -> [Byte]?
     {
+        guard !lyrics.isEmpty else { return nil }
         var bytes: [Byte] = FRAMES.LYRICS
         
         let encoding: [Byte] = [0x00, 0x65, 0x6E, 0x67, 0x00]
         
-        let content = [Byte](getLyrics().utf8)
+        let content = [Byte](lyrics.utf8)
         
         var size = toByteArray(num: UInt32(content.count + encoding.count))
         size.removeFirst()
@@ -252,12 +304,13 @@ internal class ID3Tag
     }
     
     
-    private func createArtFrame() -> [Byte]
+    private func createArtFrame() -> [Byte]?
     {
+        guard let art = artwork.art else { return nil }
         var bytes: [Byte] = FRAMES.ARTWORK
         
         // Calculate size
-        var size = toByteArray(num: UInt32(artwork.art!.length + 6))
+        var size = toByteArray(num: UInt32(art.count + 6))
         size.removeFirst()
         
         bytes.append(contentsOf: size)
@@ -275,8 +328,8 @@ internal class ID3Tag
         }
         
         // Add artwork data
-        let data = (artwork.art! as Data).withUnsafeBytes{ (bytes: UnsafePointer<Byte>)->[Byte] in
-            return Array(UnsafeBufferPointer(start: bytes, count: artwork.art!.length))
+        let data = art .withUnsafeBytes{ (bytes: UnsafePointer<Byte>)->[Byte] in
+            return Array(UnsafeBufferPointer(start: bytes, count: art.count))
         }
         bytes.append(contentsOf: data)
         
@@ -324,11 +377,6 @@ internal class ID3Tag
         return newSize
     }
     
-    private func infoExists(category: String) -> Bool
-    {
-        return category != ""
-    }
-    
     private func toByteArray<T>(num: T) -> [Byte]
     {
         var copyNum = num
@@ -345,4 +393,8 @@ internal class ID3Tag
             return data
         }
     }
+}
+
+func ~=(pattern: [ID3Tag.Byte], value: [ID3Tag.Byte]) -> Bool {
+    return pattern == value
 }

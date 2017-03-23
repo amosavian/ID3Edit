@@ -113,10 +113,10 @@ open class MP3File
     open var artist: String
     {
         get {
-            return tag.getArtist()
+            return tag.artist
         }
         set {
-            tag.set(artist: newValue)
+            tag.artist = newValue
         }
     }
     
@@ -129,10 +129,10 @@ open class MP3File
     open var title: String
     {
         get {
-            return tag.getTitle()
+            return tag.title
         }
         set {
-            tag.set(title: newValue)
+            tag.title = newValue
         }
     }
     
@@ -145,10 +145,80 @@ open class MP3File
     open var album: String
     {
         get {
-            return tag.getAlbum()
+            return tag.album
         }
         set {
-            tag.set(album: newValue)
+            tag.album = newValue
+        }
+    }
+    
+    /**
+     Returns the composer of the song
+     
+     - Returns: The song composer or a blank `String` if not available
+     */
+    open var composer: String {
+        get {
+            return tag.composer
+        }
+        set {
+            tag.composer = newValue
+        }
+    }
+    
+    /**
+     Returns the track number of the song
+     
+     - Returns: The song track number or a blank `String` if not available
+     */
+    open var trackNo: String {
+        get {
+            return tag.trackNo
+        }
+        set {
+            tag.trackNo = newValue
+        }
+    }
+    
+    /**
+     Returns the year of the song
+     
+     - Returns: The song year or a blank `String` if not available
+     */
+    open var year : String {
+        get {
+            return tag.year
+        }
+        set {
+            tag.year = newValue
+        }
+    }
+    
+    /**
+     Returns the copyright of the song
+     
+     - Returns: The song copyright or a blank `String` if not available
+     */
+    open var copyright: String {
+        get {
+            return tag.copyright
+        }
+        set {
+            tag.copyright = newValue
+        }
+    }
+    
+    /**
+     Returns the publisher of the song
+     
+     - Returns: The song publisher or a blank `String` if not available
+     */
+    open var publisher: String {
+        get {
+            return tag.publisher
+        }
+        set {
+            tag.publisher = newValue
         }
     }
     
@@ -159,10 +229,10 @@ open class MP3File
      */
     open var lyrics: String {
         get {
-            return tag.getLyrics()
+            return tag.lyrics
         }
         set {
-            tag.set(lyrics: newValue)
+            tag.lyrics = newValue
         }
     }
     
@@ -187,9 +257,9 @@ open class MP3File
      
      - Note: The artwork can only be PNG or JPG
      */
-    open func set(artworkData: Data, isPNG: Bool)
+    open func set(artwork: Data, isPNG: Bool)
     {
-        tag.set(artwork: artworkData as NSData, isPNG: isPNG)
+        tag.set(artwork: artwork, isPNG: isPNG)
     }
     
     // MARK: - Tag Creation Methods
@@ -225,7 +295,7 @@ open class MP3File
     open func getMP3Data() throws -> Data
     {
         
-        if data == nil
+        guard let data = data else
         {
             // Prevent writing if there is no data
             throw ID3EditErrors.noDataExists
@@ -236,7 +306,7 @@ open class MP3File
         
         if content.count == 0
         {
-            return data!
+            return data
         }
         else if content.count > 0xFFFFFFF
         {
@@ -244,7 +314,7 @@ open class MP3File
         }
         
         // Form the binary data
-        let newData = NSMutableData(bytes: content, length: content.count)
+        var newData = Data(bytes: content, count: content.count)
         
         var tagSize: Int
         
@@ -256,9 +326,8 @@ open class MP3File
         {
             tagSize = 0
         }
-        
-        let music = (data! as NSData).bytes + tagSize
-        newData.append(music, length: data!.count - tagSize)
+        let music = data.subdata(in: tagSize..<(data.count - tagSize))
+        newData.append(music)
         
         return newData as Data
     }

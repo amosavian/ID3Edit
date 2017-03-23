@@ -41,7 +41,7 @@ internal class TagParser
     internal func isTagPresent() -> (present: Bool, version: Bool)
     {
         // Determine if a tag is present
-        let header = ID3Tag.FRAMES.HEADER
+        let header = ID3Tag.frame.header.rawValue
         var isPresent = false
         var isCorrectVersion = false
         data!.withUnsafeBytes{ (bytes: UnsafePointer<Byte>)->Void in
@@ -55,44 +55,6 @@ internal class TagParser
         return (isPresent, isCorrectVersion)
         
     }
-    
-    
-    private func isUseful(frame: [Byte]) -> Bool
-    {
-        // Determine if the frame is useful
-        return isArtistFrame(frame: frame) || isTitleFrame(frame: frame) || isAlbumFrame(frame:frame) || isArtworkFrame(frame:frame) || isLyricsFrame(frame:frame)
-    }
-    
-    
-    private func isLyricsFrame(frame: [Byte]) -> Bool
-    {
-        return frame == ID3Tag.FRAMES.LYRICS
-    }
-    
-    
-    private func isArtistFrame(frame: [Byte]) -> Bool
-    {
-        return frame == ID3Tag.FRAMES.ARTIST
-    }
-    
-    
-    private func isAlbumFrame(frame: [Byte]) -> Bool
-    {
-        return frame == ID3Tag.FRAMES.ALBUM
-    }
-    
-    
-    private func isTitleFrame(frame: [Byte]) -> Bool
-    {
-        return frame == ID3Tag.FRAMES.TITLE
-    }
-    
-    
-    private func isArtworkFrame(frame: [Byte]) -> Bool
-    {
-        return frame == ID3Tag.FRAMES.ARTWORK
-    }
-    
     
     // MARK: - Extraction Methods
     
@@ -114,12 +76,14 @@ internal class TagParser
                 
                 
                 // Extract info from current frame if needed
-                if isUseful(frame: frameBytes)
+                if let frame = ID3Tag.frame(rawValue: frameBytes)
                 {
-                    extractInfo(bytes: bytes, frameSize: frameSize, frameBytes: frameBytes)
+                    let data = Data(bytes: bytes + frame.offset, count: frameSize - frame.offset)
+                    let isPNG = frame == .artwork && bytes[7] != 0x4A
+                    extractInfo(data: data, frameSize: frameSize, frame: frame, isPNG: isPNG)
                 }
                     
-                    // Check for padding in order to break out
+                // Check for padding in order to break out
                 else if frameBytes[0] == 0 && frameBytes[1] == 0 && frameBytes[2] == 0
                 {
                     break
@@ -132,44 +96,32 @@ internal class TagParser
     }
     
     
-    private func extractInfo(bytes: UnsafePointer<Byte>, frameSize: Int, frameBytes: [Byte])
+    private func extractInfo(data: Data, frameSize: Int, frame: ID3Tag.frame, isPNG: Bool = true)
     {
-        
-        if bytes.pointee == 0x54 // Starts with 'T' (Artist, Title, or Album)
-        {
-            // Frame holds text content
-            let content = NSString(bytes: bytes + ID3Tag.FRAME_OFFSET, length: frameSize - ID3Tag.FRAME_OFFSET, encoding: String.Encoding.ascii.rawValue) as! String
-            
-            if isArtistFrame(frame: frameBytes)
-            {
-                // Store artist
-                tag.set(artist: content)
-            }
-            else if isTitleFrame(frame: frameBytes)
-            {
-                // Store title
-                tag.set(title: content)
-            }
-            else
-            {
-                // Store album
-                tag.set(album: content)
-            }
-        }
-        else if bytes.pointee == 0x55 // Starts with 'U' (Lyrics)
-        {
-            // Get lyrics
-            let content = NSString(bytes: bytes + ID3Tag.LYRICS_FRAME_OFFSET, length: frameSize - ID3Tag.LYRICS_FRAME_OFFSET, encoding: String.Encoding.ascii.rawValue) as! String
-            
-            // Store the lyrics
-            tag.set(lyrics: content)
-        }
-        else // Leaves us with artwork
-        {
-            // Frame holds artwork
-            let isPNG = bytes[7] != 0x4A // Doesn't equal 'J' for JPG
-            let artData = NSData(bytes: bytes + ID3Tag.ART_FRAME_OFFSET, length: frameSize - ID3Tag.ART_FRAME_OFFSET)
-            tag.set(artwork: artData, isPNG: isPNG)
+        let content: String = frame != .artist ? (String(data: data, encoding: .ascii) ?? "") : ""
+        switch frame {
+        case .artist:
+            tag.artist = content
+        case .title:
+            tag.title = content
+        case .album:
+            tag.album = content
+        case .composer:
+            tag.composer = content
+        case .trackNo:
+            tag.trackNo = content
+        case .year:
+            tag.year = content
+        case .copyright:
+            tag.copyright = content
+        case .publisher:
+           tag.publisher = content
+        case .lyrics:
+            tag.lyrics = content
+        case .artwork:
+            tag.set(artwork: data, isPNG: isPNG)
+        case .header:
+            break
         }
     }
     
