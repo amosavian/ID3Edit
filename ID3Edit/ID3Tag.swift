@@ -97,20 +97,20 @@ internal class ID3Tag
     }
     
     // MARK: - Constants
-    internal static let TAG_OFFSET = 10
-    internal static let FRAME_OFFSET = 6
-    internal static let ART_FRAME_OFFSET = 12
-    internal static let LYRICS_FRAME_OFFSET = 11
+    internal static let TAG_OFFSET: Int = 10
+    internal static let FRAME_OFFSET: Int = 6
+    internal static let ART_FRAME_OFFSET: Int = 12
+    internal static let LYRICS_FRAME_OFFSET: Int = 11
     
     // MARK: - Instance Variables
-    internal var artist = ""
-    internal var title = ""
-    internal var album = ""
-    internal var composer = ""
-    internal var trackNo = ""
-    internal var year = ""
-    internal var copyright = ""
-    internal var publisher = ""
+    internal var artist: String = ""
+    internal var title: String = ""
+    internal var album: String = ""
+    internal var composer: String = ""
+    internal var trackNo: String = ""
+    internal var year: String = ""
+    internal var copyright: String = ""
+    internal var publisher: String = ""
     internal var lyrics = ""
     private var artwork = AlbumArtwork()
     
@@ -319,12 +319,14 @@ internal class ID3Tag
         if artwork.isPNG!
         {
             // PNG encoding
-            bytes.append(contentsOf: [0x00, 0x50, 0x4E, 0x47, 0x00 ,0x00])
+            let header: [Byte] = [0x00, 0x50, 0x4E, 0x47, 0x00 ,0x00]
+            bytes.append(contentsOf: header)
         }
         else
         {
             // JPG encoding
-            bytes.append(contentsOf: [0x00, 0x4A, 0x50, 0x47, 0x00 ,0x00])
+            let header: [Byte] = [0x00, 0x4A, 0x50, 0x47, 0x00 ,0x00]
+            bytes.append(contentsOf: header)
         }
         
         // Add artwork data
